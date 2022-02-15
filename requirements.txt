@@ -1,5 +1,5 @@
 requests==2.27.1
-flask==2.0.2
+flask==2.0.3
 ################
 # gunicorn bug
 # When https://github.com/eventlet/eventlet/issues/702#issuecomment-833124692 is resolved, 
