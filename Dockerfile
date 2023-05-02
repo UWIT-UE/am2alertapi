@@ -1,4 +1,4 @@
-FROM python:3.8-slim
+FROM python:3.10-slim
 
 ENV PROMETHEUS_MULTIPROC_DIR=/tmp/metric-multi
 RUN mkdir -p /tmp/metric-multi
