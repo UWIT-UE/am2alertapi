@@ -117,7 +117,10 @@ def translate(amalert):
 @server.route('/', methods=['POST'])
 async def alert():
     """Submit posted alertmanager alerts to UW alertAPI"""
-    headers = {'Authorization': 'Bearer {0}'.format(token)}
+    headers = {
+        'Authorization': 'Bearer {0}'.format(token),
+        'Content-Type': 'application/json'
+        }
 
     data = await request.get_json(force=True, silent=False, cache=True)
     alerts = translate(data)
@@ -126,12 +129,12 @@ async def alert():
         await asyncio.sleep(random.uniform(1,10000)/1000)
         try:
             async with httpx.AsyncClient() as api_client:
-                api_response = await api_client.post(alert_endpoint, headers=headers, data=json_alert, timeout=10)
+                api_response = await api_client.post(alert_endpoint, headers=headers, data=json_alert, timeout=30)
         except httpx.TimeoutException:
             logerror('timeout with alertAPI')
             response_count.labels(api_endpoint='/', status_code='500').inc()
             abort(500, description="timeout with alertapi")
-        except ConnectionError:
+        except httpx.ConnectError:
             logerror('unable to connect with alertAPI')
             response_count.labels(api_endpoint='/', status_code='500').inc()
             abort(500, description="connect error with alertapi")
@@ -152,7 +155,10 @@ async def watchdog():
     Contact must be made before the value of the label
     watchdog_timeout, which defaults to 5 minutes.
     """
-    headers = {'Authorization': 'Bearer {0}'.format(token)}
+    headers = {
+        'Authorization': 'Bearer {0}'.format(token),
+        'Content-Type': 'application/json'
+        }
 
     data = await request.get_json(force=True, silent=False, cache=True)
     alerts = translate(data)
@@ -162,12 +168,12 @@ async def watchdog():
         json_alert = json.dumps(alert)
         try:
             async with httpx.AsyncClient() as api_client:
-                api_response = await api_client.post(keepalive_endpoint, headers=headers, data=json_alert, timeout=10)
+                api_response = await api_client.post(keepalive_endpoint, headers=headers, data=json_alert, timeout=30)
         except httpx.TimeoutException:
             logerror('timeout with alertAPI keepalive')
             response_count.labels(api_endpoint='/watchdog', status_code='500').inc()
             abort(500, description="timeout with alertapi keepalive")
-        except ConnectionError:
+        except httpx.ConnectError:
             logerror('connect error with alertAPI keepalive')
             response_count.labels(api_endpoint='/watchdog', status_code='500').inc()
             abort(500, description="connect error with alertapi keepalive")
