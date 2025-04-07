@@ -9,15 +9,15 @@ if [ ! -d /app ]; then
   export PATH=`pwd`/app/bin:$PATH
 fi
 
-# use mci test token here
-export ALERTAPI_TOKEN=YOUR TOKEN
+export ALERTAPI_TOKEN=YOURTOKEN
 export ALERTAPI_URL=https://api.alerts-test.s.uw.edu
 export ALERT_ORGANIZATION="UW-IT"
+export LOG_LEVEL=DEBUG
 
 cd app
 pip install --upgrade pip
 pip install -r ../requirements.txt
 ln -sf ../am2alertapi.py
 cd ..
-hypercorn asgi:app.am2alertapi:server -b 127.0.0.1:3080 --worker-class=asyncio --workers=2 --access-logfile - --log-level DEBUG
+hypercorn asgi:app.am2alertapi:server -b 127.0.0.1:3080 --worker-class=asyncio --workers=2
 
