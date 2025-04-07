@@ -14,21 +14,14 @@ from prometheus_client import generate_latest, CollectorRegistry, CONTENT_TYPE_L
 import asyncio
 import json
 import httpx
-import socket
 import random
 import os
 import sys
 import signal
-
-# Some logging systems like stackdriver distinguish between stdout and stderr
-def loginfo(msg):
-    print('am2alertapi info: {0}'.format(msg), file=sys.stdout, flush=True )
-
-def logerror(msg):
-    print('am2alertapi error: {0}'.format(msg), file=sys.stderr, flush=True)
+import logging
 
 def cleanexit(signum, frame):
-    loginfo('shutting down')
+    server.logger.info('Shutting down')
     sys.exit()
 
 signal.signal(signal.SIGTERM, cleanexit)
@@ -37,16 +30,33 @@ signal.signal(signal.SIGINT, cleanexit)
 # this determines the Focus to AlertAPI urgency mapping
 focus_2_urgency = {1: 1, 2: 1, 3: 2, 4: 3}
 
+server = Quart(__name__)
+
+# Configure logging
+log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
+valid_levels = {
+    'DEBUG': logging.DEBUG,
+    'INFO': logging.INFO,
+    'WARNING': logging.WARNING,
+    'ERROR': logging.ERROR,
+    'CRITICAL': logging.CRITICAL
+}
+log_level_value = valid_levels.get(log_level, logging.INFO)
+
+logging.basicConfig(level=log_level_value, format='%(asctime)s %(levelname)s [%(name)s.%(process)d] %(message)s')
+server.logger.setLevel(log_level_value)
+server.logger.info(f"Log level set to {log_level}")
+
 if not 'ALERTAPI_TOKEN' in os.environ:
-    logerror('environment ALERTAPI_TOKEN not set')
+    server.logger.error('Environment ALERTAPI_TOKEN not set')
     sys.exit(1)
 
 if not 'ALERTAPI_URL' in os.environ:
-    logerror('environment ALERTAPI_URL not set')
+    server.logger.error('Environment ALERTAPI_URL not set')
     sys.exit(1)
 
 if not 'ALERT_ORGANIZATION' in os.environ:
-    logerror('environment ALERT_ORGANIZATION not set')
+    server.logger.error('Environment ALERT_ORGANIZATION not set')
     sys.exit(1)
 
 ci_organization = os.environ['ALERT_ORGANIZATION']
@@ -55,13 +65,11 @@ api_url = os.environ['ALERTAPI_URL'].rstrip('/')
 alert_endpoint = api_url + '/v1/alert'
 keepalive_endpoint = api_url + '/v1/keepalive'
 
-loginfo('config url="{0}"'.format(api_url))
-loginfo('config alert_endpoint="{0}"'.format(alert_endpoint))
-loginfo('config keepalive_endpoint="{0}"'.format(keepalive_endpoint))
-loginfo('config token="{0}"'.format("*" * len(token)))
-loginfo('config org="{0}"'.format(ci_organization))
-
-server = Quart(__name__)
+server.logger.info('Config url="{0}"'.format(api_url))
+server.logger.info('Config alert_endpoint="{0}"'.format(alert_endpoint))
+server.logger.info('Config keepalive_endpoint="{0}"'.format(keepalive_endpoint))
+server.logger.info('Config token="{0}"'.format("*" * len(token)))
+server.logger.info('Config org="{0}"'.format(ci_organization))
 
 response_count = Counter('am2alertapi_responses_total', 'HTTP responses', ['api_endpoint', 'status_code'])
 registry = CollectorRegistry()
@@ -107,7 +115,7 @@ def translate(amalert):
             results.append(result)
 
     except LookupError as e:
-        logerror("Alert input missing required labels/annotations/attributes: {}".format(e))
+        server.logger.error("Alert input missing required labels/annotations/attributes: {}".format(e))
         response_count.labels(api_endpoint='/', status_code='406').inc()
         abort(406, description="Missing required labels/annotations/attributes {}".format(e))
 
@@ -131,15 +139,15 @@ async def alert():
             async with httpx.AsyncClient() as api_client:
                 api_response = await api_client.post(alert_endpoint, headers=headers, data=json_alert, timeout=30)
         except httpx.TimeoutException:
-            logerror('timeout with alertAPI')
+            server.logger.error('Timeout with alertAPI')
             response_count.labels(api_endpoint='/', status_code='500').inc()
             abort(500, description="timeout with alertapi")
         except httpx.ConnectError:
-            logerror('unable to connect with alertAPI')
+            server.logger.error('Unable to connect with alertAPI')
             response_count.labels(api_endpoint='/', status_code='500').inc()
             abort(500, description="connect error with alertapi")
         else:
-            loginfo('alert {}:{} urgency {} return_code {}'.format(alert['ci']['name'],
+            server.logger.info('Alert {}:{} urgency {} return_code {}'.format(alert['ci']['name'],
                 alert['component']['name'], alert['urgency'], api_response.status_code))
 
     response_count.labels(api_endpoint='/', status_code=str(api_response.status_code)).inc()
@@ -170,15 +178,15 @@ async def watchdog():
             async with httpx.AsyncClient() as api_client:
                 api_response = await api_client.post(keepalive_endpoint, headers=headers, data=json_alert, timeout=30)
         except httpx.TimeoutException:
-            logerror('timeout with alertAPI keepalive')
+            server.logger.error('Timeout with alertAPI keepalive')
             response_count.labels(api_endpoint='/watchdog', status_code='500').inc()
             abort(500, description="timeout with alertapi keepalive")
         except httpx.ConnectError:
-            logerror('connect error with alertAPI keepalive')
+            server.logger.error('Connect error with alertAPI keepalive')
             response_count.labels(api_endpoint='/watchdog', status_code='500').inc()
             abort(500, description="connect error with alertapi keepalive")
         else:
-            loginfo('keepalive {}:{} urgency {} timeout {} return_code {}'.format(alert['ci']['name'],
+            server.logger.info('Keepalive {}:{} urgency {} timeout {} return_code {}'.format(alert['ci']['name'],
                 alert['component']['name'], alert['urgency'], alert['timeout'], api_response.status_code))
 
     response_count.labels(api_endpoint='/watchdog', status_code=str(api_response.status_code)).inc()
