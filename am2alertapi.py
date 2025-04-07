@@ -20,6 +20,8 @@ import sys
 import signal
 import logging
 
+server = Quart(__name__)
+
 def cleanexit(signum, frame):
     server.logger.info('Shutting down')
     sys.exit()
@@ -29,8 +31,6 @@ signal.signal(signal.SIGINT, cleanexit)
 
 # this determines the Focus to AlertAPI urgency mapping
 focus_2_urgency = {1: 1, 2: 1, 3: 2, 4: 3}
-
-server = Quart(__name__)
 
 # Configure logging
 log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
