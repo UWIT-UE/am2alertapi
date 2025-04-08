@@ -5,7 +5,7 @@ After=network.target
 [Service]
 # Required am2alertapi options are provided by environment
 EnvironmentFile=/etc/sysconfig/am2alertapi
-ExecStart=/opt/am2alertapi/bin/gunicorn --pid /run/am2alertapi/pid --bind 127.0.0.1:3080 am2alertapi:server
+ExecStart=/opt/am2alertapi/bin/hypercorn asgi:app.am2alertapi:server --pid /run/am2alertapi/pid --bind 127.0.0.1:3080 --worker-class=asyncio --workers=2
 PIDFile=/run/am2alertapi/pid
 User=nobody
 Group=nobody
