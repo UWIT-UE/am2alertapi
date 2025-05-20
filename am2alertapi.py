@@ -62,8 +62,8 @@ if not 'ALERT_ORGANIZATION' in os.environ:
 ci_organization = os.environ['ALERT_ORGANIZATION']
 token = os.environ['ALERTAPI_TOKEN']
 api_url = os.environ['ALERTAPI_URL'].rstrip('/')
-alert_endpoint = api_url + '/v1/alert'
-keepalive_endpoint = api_url + '/v1/keepalive'
+alert_endpoint = api_url + '/v2/alert'
+keepalive_endpoint = api_url + '/v2/keepalive'
 
 server.logger.info('Config url="{0}"'.format(api_url))
 server.logger.info('Config alert_endpoint="{0}"'.format(alert_endpoint))
@@ -134,7 +134,9 @@ async def alert():
     alerts = translate(data)
     for alert in alerts:
         json_alert = json.dumps(alert)
-        await asyncio.sleep(random.uniform(1,10000)/1000)
+
+        # Theoretically sleep is not needed in v2 API. We'll see.
+        #await asyncio.sleep(random.uniform(1,10000)/1000)
         try:
             async with httpx.AsyncClient() as api_client:
                 api_response = await api_client.post(alert_endpoint, headers=headers, data=json_alert, timeout=30)
