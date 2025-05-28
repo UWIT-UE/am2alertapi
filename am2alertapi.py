@@ -110,7 +110,7 @@ def translate(amalert):
                 result['urgency'] = 'OK'
 
             if alert['labels'].get('watchdog_timeout'):
-                result['timeout'] = alert['labels']['watchdog_timeout']
+                result['timeout'] = int(alert['labels']['watchdog_timeout'])
 
             results.append(result)
 
