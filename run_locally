@@ -10,7 +10,7 @@ if [ ! -d /app ]; then
 fi
 
 export ALERTAPI_TOKEN=YOURTOKEN
-export ALERTAPI_URL=https://api.alerts-test.s.uw.edu
+export ALERTAPI_URL=https://barista-eval.s.uw.edu/alert-api/api
 export ALERT_ORGANIZATION="UW-IT"
 export LOG_LEVEL=DEBUG
 
