@@ -1,4 +1,4 @@
 httpx==0.28.1
-quart==0.20.0
+quart==0.21.0
 prometheus-client
 
